@@ -1,28 +1,143 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Ego – Fairbridge Valley</title>
-  <style>
-    body { margin:0; padding:0; }
-    canvas { display:block; margin:0 auto; }
-  </style>
+  <meta charset="UTF-8">
+  <title>Ego Side-Scroller</title>
+  <style>body { margin:0; padding:0; } canvas { display:block; margin:0 auto; }</style>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
-  <script src="game.js"></script>
-</head>
-<body>
   <script>
-    window.onload = () => {
-      const config = {
-        type: Phaser.AUTO,
-        width: 800,
-        height: 600,
-        backgroundColor: '#000000',
-        physics: { default: 'arcade' },
-        scene: window.regionScenes
-      };
-      new Phaser.Game(config);
-    };
+  window.onload = () => {
+    const GAME_WIDTH  = 800;
+    const GAME_HEIGHT = 600;
+    const WORLD_WIDTH = 2000;
+
+    new Phaser.Game({
+      type: Phaser.AUTO,
+      width: GAME_WIDTH,
+      height: GAME_HEIGHT,
+      physics: {
+        default: 'arcade',
+        arcade: { gravity: { y: 800 }, debug: false }
+      },
+      scene: {
+        preload() {
+          // → Place your 4×4 walk-cycle sheet here
+          this.load.spritesheet('player','player.png',{
+            frameWidth:32, frameHeight:32
+          });
+        },
+        create() {
+          // 1) Generate simple textures for platforms, spikes & rocks
+          let g = this.add.graphics();
+          g.fillStyle(0x8B4513);   // brown platform
+          g.fillRect(0,0,64,16);
+          g.generateTexture('block',64,16);
+          g.clear();
+          g.fillStyle(0xFF0000);   // red spike
+          g.fillRect(0,0,32,16);
+          g.generateTexture('spike',32,16);
+          g.clear();
+          g.fillStyle(0x888888);   // gray rock
+          g.fillRect(0,0,8,8);
+          g.generateTexture('rock',8,8);
+          g.destroy();
+
+          // 2) World bounds & camera
+          this.cameras.main.setBounds(0,0,WORLD_WIDTH,GAME_HEIGHT);
+          this.physics.world.setBounds(0,0,WORLD_WIDTH,GAME_HEIGHT);
+
+          // 3) Platforms group
+          this.platforms = this.physics.add.staticGroup();
+          // ground
+          for(let x=0;x<WORLD_WIDTH;x+=64){
+            this.platforms.create(x, GAME_HEIGHT-32, 'block')
+              .setOrigin(0,0).refreshBody();
+          }
+          // some floating ledges
+          [[400,450],[700,350],[1000,300],[1400,420]].forEach(p=>{
+            this.platforms.create(p[0],p[1],'block')
+              .setOrigin(0,0).refreshBody();
+          });
+
+          // 4) Spikes group
+          this.spikes = this.physics.add.staticGroup();
+          [[500,GAME_HEIGHT-48],[1200,GAME_HEIGHT-48]].forEach(p=>{
+            this.spikes.create(p[0],p[1],'spike')
+              .setOrigin(0,0).refreshBody();
+          });
+
+          // 5) Player
+          this.player = this.physics.add.sprite(100, GAME_HEIGHT-100,'player');
+          this.player.setCollideWorldBounds(true);
+          this.player.body.setSize(20,32).setOffset(6,0);
+
+          // 6) Rock projectiles group
+          this.rocks = this.physics.add.group();
+
+          // 7) Animations (frame layout: row0=down, row1=left, row2=right, row3=up)
+          this.anims.create({
+            key:'run_right',
+            frames:this.anims.generateFrameNumbers('player',{ start:8, end:11 }),
+            frameRate:10, repeat:-1
+          });
+          this.anims.create({
+            key:'run_left',
+            frames:this.anims.generateFrameNumbers('player',{ start:4, end:7 }),
+            frameRate:10, repeat:-1
+          });
+
+          // 8) Colliders & Overlaps
+          this.physics.add.collider(this.player, this.platforms);
+          this.physics.add.collider(this.rocks,  this.platforms, r=>r.destroy());
+          this.physics.add.overlap(this.player, this.spikes, ()=>{
+            this.scene.restart();
+          });
+
+          // 9) Camera follow
+          this.cameras.main.startFollow(this.player,true,0.08,0.08);
+
+          // 10) Input
+          this.cursors  = this.input.keyboard.createCursorKeys();
+          this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        },
+        update() {
+          const speed = 200;
+          const jumpPower = 450;
+
+          // Horizontal movement
+          if (this.cursors.left.isDown) {
+            this.player.setVelocityX(-speed).anims.play('run_left',true);
+          }
+          else if (this.cursors.right.isDown) {
+            this.player.setVelocityX(speed).anims.play('run_right',true);
+          }
+          else {
+            this.player.setVelocityX(0);
+            this.player.anims.stop();
+            // face right idle
+            this.player.setFrame(10);
+          }
+
+          // Jump
+          if (this.cursors.up.isDown && this.player.body.touching.down) {
+            this.player.setVelocityY(-jumpPower);
+          }
+
+          // Throw rock
+          if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+            let dir = this.player.flipX ? -1 : 1;
+            let rock = this.rocks.create(
+              this.player.x + dir*16,
+              this.player.y, 'rock'
+            );
+            rock.body.allowGravity = false;
+            rock.setVelocityX(dir*400);
+          }
+        }
+      }
+    });
+  };
   </script>
-</body>
+</head>
+<body></body>
 </html>
