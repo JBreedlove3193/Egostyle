@@ -2,114 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Ego RPG (Pokémon Style)</title>
+  <title>Ego – Fairbridge Valley</title>
   <style>
-    body { background: #222; color: #fff; text-align: center; font-family: sans-serif; }
-    canvas { background: #000; display: block; margin: 20px auto; }
-    p { margin: 5px; }
+    body { margin:0; padding:0; }
+    canvas { display:block; margin:0 auto; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+  <script src="game.js"></script>
 </head>
 <body>
-  <h1>Ego RPG</h1>
-  <p>Use ← ↑ → ↓ to move. In battle, press <strong>F</strong> to Fight, <strong>R</strong> to Run.</p>
-  <canvas id="gameCanvas" width="640" height="480"></canvas>
   <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-
-    // --- Config ---
-    const TILE = 32;
-    const ROWS = canvas.height / TILE;
-    const COLS = canvas.width / TILE;
-    const ENCOUNTER_RATE = 0.1;  // 10% in grass
-
-    // --- Build a simple map: 0=grass, 1=road ---
-    let map = [];
-    for(let y=0; y<ROWS; y++){
-      map[y]=[];
-      for(let x=0; x<COLS; x++){
-        map[y][x] = (y>5 && y<8) || (x>3 && x<6) ? 1 : 0;
-      }
-    }
-
-    // --- Player & Battle State ---
-    let player = { x: Math.floor(COLS/2), y: Math.floor(ROWS/2) };
-    let inBattle = false;
-    let battle = { playerHP:0, wildHP:0 };
-
-    // --- Drawing Functions ---
-    function drawWorld(){
-      for(let y=0; y<ROWS; y++){
-        for(let x=0; x<COLS; x++){
-          ctx.fillStyle = map[y][x] ? '#646464' : '#32C832';
-          ctx.fillRect(x*TILE, y*TILE, TILE, TILE);
-        }
-      }
-      ctx.fillStyle = '#3232C8';
-      ctx.fillRect(player.x*TILE+2, player.y*TILE+2, TILE-4, TILE-4);
-    }
-
-    function drawBattle(){
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#fff';
-      ctx.font = '20px sans-serif';
-      ctx.fillText(`Your HP: ${battle.playerHP}`, 20, 40);
-      ctx.fillText(`Wild HP: ${battle.wildHP}`, 20, 80);
-      ctx.fillText('F = Fight    R = Run', 20, 120);
-    }
-
-    // --- Battle Logic ---
-    function startBattle(){
-      inBattle = true;
-      battle = { playerHP: 20, wildHP: 10 };
-    }
-    function handleBattle(key){
-      if(key==='r'){
-        inBattle = false;
-      } else if(key==='f'){
-        battle.wildHP -= Math.floor(Math.random()*5)+3;
-        if(battle.wildHP <= 0){
-          inBattle = false;
-          return;
-        }
-        battle.playerHP -= Math.floor(Math.random()*5)+1;
-        if(battle.playerHP <= 0){
-          alert('You fainted...');
-          window.location.reload();
-        }
-      }
-    }
-
-    // --- Input Handling ---
-    document.addEventListener('keydown', e => {
-      if(inBattle){
-        handleBattle(e.key.toLowerCase());
-      } else {
-        let dx=0, dy=0;
-        if(e.key==='ArrowUp')    dy=-1;
-        if(e.key==='ArrowDown')  dy= 1;
-        if(e.key==='ArrowLeft')  dx=-1;
-        if(e.key==='ArrowRight') dx= 1;
-        if(dx||dy){
-          let nx = player.x+dx, ny = player.y+dy;
-          if(nx>=0 && nx<COLS && ny>=0 && ny<ROWS){
-            player.x=nx; player.y=ny;
-            if(map[ny][nx]===0 && Math.random()<ENCOUNTER_RATE){
-              startBattle();
-            }
-          }
-        }
-      }
-    });
-
-    // --- Main Loop ---
-    function loop(){
-      if(inBattle) drawBattle();
-      else          drawWorld();
-      requestAnimationFrame(loop);
-    }
-    loop();
+    window.onload = () => {
+      const config = {
+        type: Phaser.AUTO,
+        width: 800,
+        height: 600,
+        backgroundColor: '#000000',
+        physics: { default: 'arcade' },
+        scene: window.regionScenes
+      };
+      new Phaser.Game(config);
+    };
   </script>
 </body>
 </html>
